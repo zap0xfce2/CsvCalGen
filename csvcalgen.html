@@ -1,0 +1,148 @@
+<html>
+	<head>
+		<title>CSV - Calendar Generator</title>
+		<link rel="stylesheet" type="text/css" href="style.css">
+		<script type="text/javascript" src="jquery.js"></script>
+		<script type="text/javascript" src="table2CSV.js" ></script>
+
+		<script type="text/javascript">
+			/*
+			*  CSV - Calendar Generator
+			*  created by TheG33k in July 2011
+			*/
+
+			// Kalenderfunkion welche den grundlegenden Kalender bereitstellt
+			function buildCal(m, y, cM, cH, cDW, cD, brdr, showdate) {
+
+				// Basic Calendar von http://www.dynamicdrive.com/dynamicindex7/basiccalendar.htm
+				// buildCal(Monat,Jahr, "main", "month", "daysofweek", "days", 1)
+
+				var mn=['Januar','Februar','M&auml;rz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+				var dim=[31,0,31,30,31,30,31,31,30,31,30,31];
+
+				var oD = new Date(y, m-1, 0); //DD replaced line to fix date bug when current day is 31st
+				oD.od=oD.getDay()+1; //DD replaced line to fix date bug when current day is 31st
+
+				var todaydate=new Date() //DD added
+				var scanfortoday=(y==todaydate.getFullYear() && m==todaydate.getMonth()+1)? todaydate.getDate() : 0 //DD added
+
+				dim[1]=(((oD.getFullYear()%100!=0)&&(oD.getFullYear()%4==0))||(oD.getFullYear()%400==0))?29:28;
+
+				var t='<div class="'+cM+'"><table class="'+cM+'" cols="7" cellpadding="0" border="'+brdr+'" cellspacing="0"><tr align="center">';
+
+				t+='<td colspan="7" align="center" class="'+cH+'">'+mn[m-1]+' - '+showdate+'</td></tr><tr align="center">';
+
+				//for(s=0;s<7;s++)
+				//t+='<td class="'+cDW+'">'+"SMDMDFS".substr(s,1)+'</td>';
+
+				t+='<td class="'+cDW+'">'+"Mo"+'</td>';
+				t+='<td class="'+cDW+'">'+"Di"+'</td>';
+				t+='<td class="'+cDW+'">'+"Mi"+'</td>';
+				t+='<td class="'+cDW+'">'+"Do"+'</td>';
+				t+='<td class="'+cDW+'">'+"Fr"+'</td>';
+				t+='<td class="'+cDW+'">'+"Sa"+'</td>';
+				t+='<td class="'+cDW+'">'+"So"+'</td>';
+
+				t+='</tr><tr align="center">';
+
+				for(i=1;i<=42;i++) {
+					var x=((i-oD.od>=0)&&(i-oD.od<dim[m-1]))? i-oD.od+1 : '';//'&nbsp;';
+
+					if (x==scanfortoday) //DD added
+						x='<span id="today">'+x+'</span>' //DD added
+					t+='<td class="'+cD+'">'+x+'</td>';
+					if(((i)%7==0)&&(i<36))
+						t+='</tr><tr align="center">';
+				}
+
+				return t+='</tr></table></div>';
+			}
+
+			// funktion welche das Jahr zurück gibt
+			// entweder lang oder kurz
+			function GibJahr(AktuellOderMehr, LangesDatum) {
+
+				var Jahr = new Date().getFullYear()+AktuellOderMehr;
+
+				if (LangesDatum)
+					return Jahr;
+				else
+					return Jahr.toString().substr(2,3);
+			}
+
+			// funktion erstellt den kalender
+			function ErstelleKalender (Jahr, Monate, LangesDatum) {
+				var x = 1;
+				for (var i=1; i <= Monate; i++) {
+					// Wenn ein Jahr erstellt werden soll
+					if (i <= 12)
+						$('<div>').append(buildCal(i,GibJahr(Jahr,true), "main", "month", "daysofweek", "days", 1, GibJahr(Jahr,LangesDatum))).appendTo("#Kalender");
+					// sonst mehr als ein jahr
+					if (i >= 13) {
+						$('<div>').append(buildCal(x,GibJahr(Jahr,true), "main", "month", "daysofweek", "days", 1, GibJahr(Jahr,LangesDatum))).appendTo("#Kalender");
+						x++;
+					}
+
+				};
+			}
+
+			// herunterladen der csv ermöglichen
+			// php auf server verarbeitet die daten
+			function CsvDownloaden() {
+				var csv_value=$('#Kalender').table2CSV({
+					delivery:'value'
+				});
+				$("#csv_text").val(csv_value);
+			}
+
+			// erstellen der forms
+			$( function() {
+
+				// form an php senden
+				$('<form action="getCSV.php" method ="post">')
+
+				.append('Wie lang soll der Kalender sein?<br/>')
+
+				.append('<input type="radio" name="Monat" value="12" checked />12 Monate')
+				.append('<input type="radio" name="Monat" value="14" />14 Monate')
+				.append('<input type="radio" name="Monat" value="16" />16 Monate<hr>')
+
+				.append('F&uuml;r welches Jahr soll der Kalender sein?<br/>')
+
+				.append('<input type="radio" name="Jahr" value="'+GibJahr(0,true)+'" checked />'+GibJahr(0,true))
+				.append('<input type="radio" name="Jahr" value="'+GibJahr(1,true)+'" />'+GibJahr(1,true))
+				.append('<input type="radio" name="Jahr" value="'+GibJahr(2,true)+'" />'+GibJahr(2,true)+'<hr>')
+
+				.append('Weitere Optionen:<br/>')
+				.append('<input type="checkbox" name="Jahreszahl" value="Jahreszahl" checked /> Lange Jahreszahl?<hr>')
+
+				.append('<input type="hidden" name="csv_text" id="csv_text">')
+
+				.append('<input type="submit" id="GenerateCSV" value="Generiere Kalender CSV"/>')
+
+				.appendTo("#Optionen");
+
+				// was passiert wenn man auf den knopf drückt
+				$("#GenerateCSV").click( function() {
+
+					// beim klick voherigen kalender mit dem neu generierten ersetzen
+					// wenn leer (beim ersten mal) dann wird nur ein leerer div ersetzt
+					$("#Kalender").replaceWith('<div id="Kalender"></div>');
+										
+
+					ErstelleKalender($('input:radio[name=Jahr]:checked').val() - new Date().getFullYear(), $('input:radio[name=Monat]:checked').val(), ($('input:checkbox:checked').val() == "Jahreszahl") ? true : false);
+
+					CsvDownloaden();
+					
+				})
+			})
+		</script>
+	</head>
+	<body>
+		<h1>CSV - Calendar Generator</h1>
+		<div id="Optionen">
+		</div>
+		<div id="Kalender">
+		</div>
+	</body>
+</html>
